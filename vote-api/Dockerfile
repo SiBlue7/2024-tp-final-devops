@@ -1,4 +1,4 @@
-FROM golang:1.23 AS build
+FROM golang:1.22 AS build
 
 WORKDIR /app
 COPY . .
@@ -12,7 +12,7 @@ COPY --from=build /bin/app /bin/app
 
 ARG PG_PASSWORD
 
-ENV PG_URL="postgresql://neondb_owner:${PG_PASSWORD}@ep-hidden-mountain-a53rwzo1.us-east-2.aws.neon.tech/neondb?sslmode=require"
+ENV PG_URL="postgresql://neondb_owner:password@ep-hidden-mountain-a53rwzo1.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
