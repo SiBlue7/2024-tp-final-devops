@@ -16,7 +16,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - PG_URL="postgresql://user:password@ep-hidden-mountain-a53rwzo1.us-east-2.aws.neon.tech/neondb?sslmode=require
+      - PG_URL="postgresql://user:password@5432/vote-api?sslmode=disable"
 
   web-client:
     build: ./web-client

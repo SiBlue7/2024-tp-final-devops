@@ -12,7 +12,7 @@ COPY --from=build /bin/app /bin/app
 
 ARG PG_PASSWORD
 
-ENV PG_URL="postgresql://neondb_owner:pasword@ep-hidden-mountain-a53rwzo1.us-east-2.aws.neon.tech/neondb?sslmode=require"
+ENV PG_URL="postgres://user:password@host.docker.internal:5432/postgres?sslmode=disable"
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
