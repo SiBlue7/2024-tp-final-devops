@@ -154,12 +154,10 @@ jobs:
               username: ${{secrets.USERNAME_CHEVALIER}}
               password: ${{secrets.PASSWORD_CHEVALIER}}
 
-          - name: Build and push docker image to registry
-            uses: docker/build-push-action@v5
-            with:
-              context: ./vote-api
-              push: true
-              tags: chevalier/vote-api:latest
+          - name: Push docker image to registry
+            run: |
+              echo $PASSWORD_CHEVALIER | docker login -u $USERNAME_CHEVALIER --password-stdin
+              docker push $USERNAME_CHEVALIER/vote-api:latest
 
     push_web_to_registry:
       name: push docker image to hub
@@ -179,9 +177,8 @@ jobs:
           with:
             username: ${{secrets.USERNAME_CHEVALIER}}
             password: ${{secrets.PASSWORD_CHEVALIER}}
-        - name: build and push docker image to registry
-          uses: docker/build-push-action@v5
-          with:
-            context: ./web-client
-            push: true
-            tags: chevalier/web-client:latest            
+        
+        - name: Push docker image to registry
+          run: |
+            echo $PASSWORD_CHEVALIER | docker login -u $USERNAME_CHEVALIER --password-stdin
+            docker push $USERNAME_CHEVALIER/web-client:latest
