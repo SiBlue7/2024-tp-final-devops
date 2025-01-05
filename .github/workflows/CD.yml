@@ -1,0 +1,64 @@
+name: Continuous Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    pull_request:
+      branches:
+        - main
+  workflow_run:
+    workflows: [ "Continuous Integration Pipeline" ]
+    types:
+      - completed
+
+jobs:
+  deploy-vote-api:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy vote-api to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_API_DEPLOY_HOOK }}
+        run: |
+          cd vote-api
+          curl -X POST \
+          -H "Authorization: Bearer $RENDER_API_KEY" \
+          -H "Content-Type: application/json" \
+          $RENDER_DEPLOY_HOOK
+
+  deploy-web-client:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: deploy-vote-api
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy web-client to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_WEB_CLI_DEPLOY_HOOK }}
+        run: |
+          cd web-client
+          curl -X POST \
+          -H "Authorization: Bearer $RENDER_API_KEY" \
+          -H "Content-Type: application/json" \
+          $RENDER_DEPLOY_HOOK
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: deploy-web-client
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy docs to Vercel
+        run: |
+          cd docs
+          vercel --token ${{ secrets.VERCEL_DOCS_TOKEN }} --prod

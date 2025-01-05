@@ -1,177 +1,213 @@
+name: Continuous Integration Pipeline
+
 on:
-    push:
-      branches:
-        - "**"
+  push:
+    branches:
+      - "main"
+      - "develop/*"
+  pull_request:
+    branches:
+      - "main"
 
 jobs:
-    docs-build:
-        runs-on: ubuntu-latest
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
-        
-        - name: Setup Node
-          uses: actions/setup-node@v4
-          with:
-            node-version: 22
-        - run: |
-            cd docs
-            yarn install --no-lockfile
-            yarn build
-    
-    api-lint:
-        runs-on: ubuntu-latest
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
 
-        - name: Setup Go
-          uses: actions/setup-go@v4
-          with:
-            go-version: 1.23
+  api-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - run: |
-            cd vote-api
-            go mod tidy
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin v1.63.4
-            ./bin/golangci-lint run
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
 
-    api-tests:
-        runs-on: ubuntu-latest
-        needs: api-lint
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
-  
-        - name: Setup Go
-          uses: actions/setup-go@v4
-          with:
-            go-version: 1.23
+      - run: |
+          cd vote-api
+          go mod tidy
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin v1.63.4
+          ./bin/golangci-lint run
 
-        - run: |
-            cd vote-api
-            go test ./...
+  api-format:
+    runs-on: ubuntu-latest
+    needs: api-lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    api-build:
-        runs-on: ubuntu-latest
-        needs: api-tests
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
-    
-        - name: Setup Go
-          uses: actions/setup-go@v4
-          with:
-            go-version: "1.23"
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
 
-        - run: |
-            cd vote-api
-            go build
+      - run: |
+          cd vote-api
+          go fmt ./...
 
-    api-format:
-        runs-on: ubuntu-latest
-        needs: api-build
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+  api-tests:
+    runs-on: ubuntu-latest
+    needs: api-format
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Setup Go
-          uses: actions/setup-go@v4
-          with:
-            go-version: 1.23
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
 
-        - run: |
-            cd vote-api
-            go fmt ./...
+      - run: |
+          cd vote-api
+          go test ./...
 
-    web-lint:
-        runs-on: ubuntu-latest
-        needs: api-build
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+  api-build:
+    runs-on: ubuntu-latest
+    needs: api-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Setup Node
-          uses: actions/setup-node@v4
-          with:
-            node-version: 22
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
 
-        - run: |
-            cd web-client
-            yarn install --no-lockfile
-            yarn lint
+      - run: |
+          cd vote-api
+          go build
+  push_api_to_registry:
+    runs-on: ubuntu-latest
+    needs: api-build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: |
+          cd vote-api
+          docker image build -t ${{ secrets.DOCKER_USERNAME }}/vote-api:latest -f Dockerfile .
 
-    web-build:
-        runs-on: ubuntu-latest
-        needs: web-lint
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+      - name: Push Docker image
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+          docker push $DOCKER_USERNAME/vote-api:latest
 
-        - name: Setup Node
-          uses: actions/setup-node@v4
-          with:
-            node-version: 22
+  web-client-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - run: |
-            cd web-client
-            yarn install --no-lockfile
-            yarn build
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
 
-    check-format:
-        runs-on: ubuntu-latest
-        needs: web-build
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
-  
-        - name: Setup Node
-          uses: actions/setup-node@v4
-          with:
-            node-version: 22
+      - run: |
+          cd web-client
+          yarn install --no-lockfile
+          yarn lint
 
-        - run: |
-            cd web-client
-            yarn install --no-lockfile
-            yarn format:check
+  web-client-format:
+    runs-on: ubuntu-latest
+    needs: web-client-lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    push_api_to_registry:
-            name: push docker image to hub
-            needs: api-build
-            runs-on: ubuntu-latest
-            steps:
-              - name: Checkout code
-                uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
 
-              - name: Login to docker registry
-                uses: docker/login-action@v3
-                with:
-                  username: ${{secrets.USERNAME_CHEVALIER}}
-                  password: ${{secrets.PASSWORD_CHEVALIER}}
+      - run: |
+          cd web-client
+          yarn install --no-lockfile
+          yarn format:write
 
-              - name: Build and push docker image to registry
-                uses: docker/build-push-action@v5
-                with:
-                  context: ./vote-api
-                  push: true
-                  tags: chevalier/vote-api:latest
+  web-client-check-format:
+    runs-on: ubuntu-latest
+    needs: web-client-format
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    push_web_to_registry:
-          name: push docker image to hub
-          needs: web-build
-          runs-on: ubuntu-latest
-          steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
 
-            - name: Login to docker registry
-              uses: docker/login-action@v3
-              with:
-                username: ${{secrets.USERNAME_CHEVALIER}}
-                password: ${{secrets.PASSWORD_CHEVALIER}}
-            - name: build and push docker image to registry
-              uses: docker/build-push-action@v5
-              with:
-                context: ./web-client
-                push: true
-                tags: chevalier/web-client:latest 
+      - run: |
+          cd web-client
+          yarn install --no-lockfile
+          yarn format:check
+
+
+  web-client-build:
+    runs-on: ubuntu-latest
+    needs: web-client-check-format
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
+
+      - run: |
+          cd web-client
+          yarn install --no-lockfile
+          yarn build
+
+  push_web_client_to_registry:
+    runs-on: ubuntu-latest
+    needs: web-client-build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: |
+          cd web-client
+          docker image build -t ${{ secrets.DOCKER_USERNAME }}/web-client:latest -f Dockerfile .
+
+      - name: Push Docker image
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+          docker push $DOCKER_USERNAME/web-client:latest
+
+  docs-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
+      - run: |
+          cd docs
+          yarn install --no-lockfile
+          yarn build
+
+  push_docs_to_registry:
+    runs-on: ubuntu-latest
+    needs: docs-build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: |
+          cd docs
+          docker image build -t ${{ secrets.DOCKER_USERNAME }}/docs:latest -f Dockerfile .
+
+      - name: Push Docker image
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+          docker push $DOCKER_USERNAME/docs:latest
