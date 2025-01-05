@@ -14,10 +14,10 @@ WORKDIR /app
 
 COPY --from=build /app/ .
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+#RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-USER appuser
+#USER appuser
 
-EXPOSE 8080
+EXPOSE 3001
 
 CMD ["yarn", "start"]

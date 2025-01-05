@@ -1,22 +1,19 @@
-FROM golang:1.23 AS build
+FROM golang:1.23.4-alpine3.21 AS build
 
 WORKDIR /app
+
+COPY go.mod go.sum ./
+
+RUN go mod download
+
 COPY . .
 
-RUN go build
-RUN mkdir /bin/app
-RUN mv vote-api /bin/app
+RUN go build -o vote-api
 
 FROM alpine:3.21
-COPY --from=build /bin/app /bin/app
+COPY --from=build /app/vote-api /app/vote-api
 
-ARG PG_PASSWORD
+WORKDIR /app
 
-ENV PG_URL="postgresql://neondb_owner:${PG_PASSWORD}@ep-hidden-mountain-a53rwzo1.us-east-2.aws.neon.tech/neondb?sslmode=require"
-
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-USER appuser
-
-EXPOSE 8080
-CMD ["/bin/app/vote-api"]
+EXPOSE 8001
+CMD ["./vote-api"]

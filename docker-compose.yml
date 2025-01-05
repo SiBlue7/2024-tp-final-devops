@@ -2,30 +2,29 @@ version: '3.9'
 
 services:
 
-  database:
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: vote-api
-    ports:
-      - "5432:5432"
-
   vote-api:
-    build: ./vote-api
+    build:
+      context: ./vote-api
+      dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8001:8001"
     environment:
-      - PG_URL="postgresql://user:password@ep-hidden-mountain-a53rwzo1.us-east-2.aws.neon.tech/neondb?sslmode=require
+      - PG_URL="postgresql://user:password@ep-hidden-mountain-a53rwzo1.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
   web-client:
-    build: ./web-client
+    depends_on:
+      - vote-api
+    build:
+      context: ./web-client
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
       - VOTE_API_BASE_URL=http://vote-api:8080
 
   docs:
-    build: ./docs
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "3001:80"
