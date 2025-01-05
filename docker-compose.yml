@@ -7,9 +7,12 @@ services:
       context: ./vote-api
       dockerfile: Dockerfile
     ports:
-      - "8001:8001"
+      - "8080:8080"
+
+    networks:
+      - tp-final-network
     environment:
-      - PG_URL="postgresql://user:password@ep-hidden-mountain-a53rwzo1.us-east-2.aws.neon.tech/neondb?sslmode=require"
+      - PG_URL="postgresql://neondb_owner:Y4rPizj8SwsA@ep-calm-bird-a5gdmsle.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
   web-client:
     depends_on:
@@ -19,6 +22,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    networks:
+      - tp-final-network
     environment:
       - VOTE_API_BASE_URL=http://vote-api:8080
 
@@ -27,4 +32,8 @@ services:
       context: ./docs
       dockerfile: Dockerfile
     ports:
-      - "3001:80"
+      - "80:80"
+
+networks:
+  tp-final-network:
+    driver: bridge
