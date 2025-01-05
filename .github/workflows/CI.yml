@@ -75,3 +75,24 @@ jobs:
       - run: |
           cd vote-api
           go build
+          
+  push_api_to_registry:
+    name: push docker image to hub
+    needs: api-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to docker registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{secrets.USERNAME_CHEVALIER}}
+          password: ${{secrets.PASSWORD_CHEVALIER}}
+
+      - name: Build and push docker image to registry
+        uses: docker/build-push-action@v5
+        with:
+          context: ./vote-api
+          push: true
+          tags: chevalier/vote-api:latest
