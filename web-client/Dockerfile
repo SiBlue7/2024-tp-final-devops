@@ -14,10 +14,6 @@ WORKDIR /app
 
 COPY --from=build /app/ .
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+EXPOSE 3000
 
-USER appuser
-
-EXPOSE 8080
-
-CMD ["yarn", "start"]
+ENTRYPOINT ["yarn", "start"]

@@ -1,22 +1,19 @@
-FROM golang:1.22 AS build
+FROM golang:1.23.4-alpine3.21 AS build
 
 WORKDIR /app
+
+COPY go.mod go.sum ./
+
+RUN go mod download
+
 COPY . .
 
-RUN go build
-RUN mkdir /bin/app
-RUN mv vote-api /bin/app
+RUN go build -o vote-api
 
 FROM alpine:3.21
-COPY --from=build /bin/app /bin/app
+COPY --from=build /app/vote-api /app/vote-api
 
-ARG PG_PASSWORD
-
-ENV PG_URL="postgres://user:password@host.docker.internal:5432/postgres?sslmode=disable"
-
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-USER appuser
+WORKDIR /app
 
 EXPOSE 8080
-CMD ["/bin/app/vote-api"]
+CMD ["./vote-api"]
