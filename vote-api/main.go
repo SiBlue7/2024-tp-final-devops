@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	port          = "8001"
+	port          = "8080"
 	JsonLogEnvVar = "JSON_LOG"
 )
 

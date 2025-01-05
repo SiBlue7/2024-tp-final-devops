@@ -15,5 +15,5 @@ COPY --from=build /app/vote-api /app/vote-api
 
 WORKDIR /app
 
-EXPOSE 8001
+EXPOSE 8080
 CMD ["./vote-api"]

@@ -1,4 +1,4 @@
-version: '3.9'
+version: '3.8'
 
 services:
 
@@ -8,11 +8,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
-
     networks:
       - tp-final-network
     environment:
-      - PG_URL="postgresql://neondb_owner:Y4rPizj8SwsA@ep-calm-bird-a5gdmsle.us-east-2.aws.neon.tech/neondb?sslmode=require"
+      - PG_URL="postgresql://neondb_owner:${DB_PASSWORD}@ep-calm-bird-a5gdmsle.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
   web-client:
     depends_on:
