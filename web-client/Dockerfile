@@ -6,7 +6,6 @@ COPY . .
 
 RUN yarn install
 RUN yarn build
-RUN mv .next/server/pages /app
 
 FROM node:23-alpine
 
