@@ -1,6 +1,25 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./apps/postgres:/var/lib/postgresql/data
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: vote-api
+    networks:
+      - tp-final-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d vote-api" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
 
   vote-api:
     build:
@@ -11,7 +30,12 @@ services:
     networks:
       - tp-final-network
     environment:
-      - PG_URL="postgresql://neondb_owner:${DB_PASSWORD}@ep-calm-bird-a5gdmsle.us-east-2.aws.neon.tech/neondb?sslmode=require"
+      - PG_URL=postgresql://user:password@postgres:5432/vote-api?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
   web-client:
     depends_on:
       - vote-api
